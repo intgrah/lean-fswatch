@@ -4,12 +4,12 @@ open FSWatch
 
 def main : IO UInt32 := do
   let dir ← IO.FS.createTempDir
+  let events ← IO.mkRef #[]
   let mut passed := 0
   let mut failed := 0
-  let events ← IO.mkRef #[]
 
   Manager.withManager fun m => do
-    let stopListening ← m.watchDir dir (callback := fun e => events.modify (·.push e))
+    let _ ← m.watchDir dir (callback := fun e => events.modify (·.push e))
 
     IO.FS.writeFile (dir / "a.txt") "hello"
     IO.sleep 100
@@ -17,27 +17,43 @@ def main : IO UInt32 := do
     IO.FS.writeFile (dir / "a.txt") "world"
     IO.sleep 100
 
-    IO.FS.removeFile (dir / "a.txt")
+    IO.FS.rename (dir / "a.txt") (dir / "b.txt")
     IO.sleep 100
 
-    stopListening
+    IO.FS.removeFile (dir / "b.txt")
+    IO.sleep 100
 
   let evs ← events.get
 
-  if evs.any (fun e => e.path.toString.endsWith "a.txt") then
+  if evs.any (·.kind == .added) then
     passed := passed + 1
   else
     failed := failed + 1
+    IO.eprintln "FAIL: added"
 
-  if evs.any (fun e => e.kind == .added) then
+  if evs.any (·.kind == .modified) then
     passed := passed + 1
   else
     failed := failed + 1
+    IO.eprintln "FAIL: modified"
 
-  if evs.any (fun e => e.kind == .removed) then
+  if evs.any (·.kind == .movedOut) then
     passed := passed + 1
   else
     failed := failed + 1
+    IO.eprintln "FAIL: movedOut"
+
+  if evs.any (·.kind == .movedIn) then
+    passed := passed + 1
+  else
+    failed := failed + 1
+    IO.eprintln "FAIL: movedIn"
+
+  if evs.any (·.kind == .removed) then
+    passed := passed + 1
+  else
+    failed := failed + 1
+    IO.eprintln "FAIL: removed"
 
   IO.FS.removeDirAll dir
   IO.println s!"{passed} passed, {failed} failed"
