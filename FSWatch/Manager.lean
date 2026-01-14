@@ -10,6 +10,7 @@ structure WatchEntry where
   path : FilePath
   callback : EventCallback
   predicate : EventPredicate
+  onNewDir : Option (FilePath → IO Unit) := none
 
 structure Manager where
   private mk ::
@@ -68,6 +69,12 @@ private def linuxLoop (m : Manager) : IO Unit := do
             let event := convertINotifyEvent entry.path time raw
             if entry.predicate event then
               try entry.callback event catch _ => pure ()
+            if event.kind == .added && event.isDirectory == .directory then
+              if let some onNewDir := entry.onNewDir then
+                try onNewDir event.path catch _ => pure ()
+            if event.kind == .movedIn && event.isDirectory == .directory then
+              if let some onNewDir := entry.onNewDir then
+                try onNewDir event.path catch _ => pure ()
       | none => pure ()
     IO.sleep 10
 
@@ -111,13 +118,7 @@ def stop (m : Manager) : IO Unit := do
   for (h, _) in handles do
     try RDCW.close h catch _ => pure ()
 
-def watchDir (m : Manager) (path : FilePath)
-    (predicate : EventPredicate := EventPredicate.all)
-    (callback : EventCallback) : IO StopListening := do
-  let absPath ← IO.FS.realPath path
-  let idx := (← m.watches.get).size
-  let entry : WatchEntry := { path := absPath, callback, predicate }
-  m.watches.modify (·.push entry)
+private def addSingleWatch (m : Manager) (absPath : FilePath) (idx : Nat) : IO StopListening := do
   if System.Platform.isWindows then
     let h ← RDCW.openDir absPath.toString
     m.windowsHandles.modify (·.push (h, idx))
@@ -131,6 +132,35 @@ def watchDir (m : Manager) (path : FilePath)
     return do
       m.linuxWds.modify (·.filter (·.2 != idx))
       try INotify.rmWatch fd wd catch _ => pure ()
+
+def watchDir (m : Manager) (path : FilePath)
+    (predicate : EventPredicate := EventPredicate.all)
+    (callback : EventCallback) : IO StopListening := do
+  let absPath ← IO.FS.realPath path
+  let idx := (← m.watches.get).size
+  let entry : WatchEntry := { path := absPath, callback, predicate }
+  m.watches.modify (·.push entry)
+  addSingleWatch m absPath idx
+
+partial def watchTree (m : Manager) (path : FilePath)
+    (predicate : EventPredicate := EventPredicate.all)
+    (callback : EventCallback) : IO StopListening := do
+  let absPath ← IO.FS.realPath path
+  let stops ← IO.mkRef ([] : List StopListening)
+
+  let rec addDir (dir : FilePath) : IO Unit := do
+    let idx := (← m.watches.get).size
+    let entry : WatchEntry := { path := dir, callback, predicate, onNewDir := some addDir }
+    m.watches.modify (·.push entry)
+    let stop ← addSingleWatch m dir idx
+    stops.modify (stop :: ·)
+    for child in ← dir.readDir do
+      if (← child.path.isDir) then
+        addDir child.path
+
+  addDir absPath
+  return do
+    for stop in ← stops.get do stop
 
 def withManager {α} (f : Manager → IO α) : IO α := do
   let m ← create
