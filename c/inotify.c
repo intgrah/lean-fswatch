@@ -1,6 +1,9 @@
+#include <lean/lean.h>
+
+#if defined(__linux__) || defined(__FreeBSD__)
+
 #include <errno.h>
 #include <fcntl.h>
-#include <lean/lean.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/inotify.h>
@@ -42,12 +45,6 @@ LEAN_EXPORT lean_obj_res fswatch_inotify_close(uint32_t fd,
   close((int)fd);
   return lean_io_result_mk_ok(lean_box(0));
 }
-
-// structure RawEvent where
-//   wd : Nat
-//   mask : Nat
-//   cookie : Nat
-//   name : String
 
 static lean_object *mk_raw_event(int32_t wd, uint32_t mask, uint32_t cookie,
                                  const char *name) {
@@ -107,3 +104,52 @@ LEAN_EXPORT uint32_t fswatch_IN_CLOSE(void) { return IN_CLOSE; }
 LEAN_EXPORT uint32_t fswatch_IN_MOVE(void) { return IN_MOVE; }
 LEAN_EXPORT uint32_t fswatch_IN_ISDIR(void) { return IN_ISDIR; }
 LEAN_EXPORT uint32_t fswatch_IN_ALL_EVENTS(void) { return IN_ALL_EVENTS; }
+
+#else
+
+#define PLATFORM_ERROR                                                         \
+  lean_io_result_mk_error(lean_mk_io_user_error(                               \
+      lean_mk_string("inotify is only available on Linux/FreeBSD")))
+
+LEAN_EXPORT lean_obj_res fswatch_inotify_init(lean_obj_arg world) {
+  return PLATFORM_ERROR;
+}
+LEAN_EXPORT lean_obj_res fswatch_inotify_add_watch(uint32_t fd,
+                                                   lean_obj_arg path,
+                                                   uint32_t mask,
+                                                   lean_obj_arg world) {
+  return PLATFORM_ERROR;
+}
+LEAN_EXPORT lean_obj_res fswatch_inotify_rm_watch(uint32_t fd, uint32_t wd,
+                                                  lean_obj_arg world) {
+  return PLATFORM_ERROR;
+}
+LEAN_EXPORT lean_obj_res fswatch_inotify_close(uint32_t fd,
+                                               lean_obj_arg world) {
+  return PLATFORM_ERROR;
+}
+LEAN_EXPORT lean_obj_res fswatch_inotify_read(uint32_t fd, lean_obj_arg world) {
+  return PLATFORM_ERROR;
+}
+
+LEAN_EXPORT uint32_t fswatch_IN_ACCESS(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_MODIFY(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_ATTRIB(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_CLOSE_WRITE(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_CLOSE_NOWRITE(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_OPEN(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_MOVED_FROM(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_MOVED_TO(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_CREATE(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_DELETE(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_DELETE_SELF(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_MOVE_SELF(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_UNMOUNT(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_Q_OVERFLOW(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_IGNORED(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_CLOSE(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_MOVE(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_ISDIR(void) { return 0; }
+LEAN_EXPORT uint32_t fswatch_IN_ALL_EVENTS(void) { return 0; }
+
+#endif

@@ -1,3 +1,4 @@
 import FSWatch.Types
-import FSWatch.Manager
 import FSWatch.INotify
+import FSWatch.RDCW
+import FSWatch.Manager
