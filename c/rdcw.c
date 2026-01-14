@@ -2,6 +2,7 @@
 
 #if defined(_WIN32)
 
+#include <stdio.h>
 #include <windows.h>
 
 static inline lean_obj_res lean_mk_string_from_wchar(const WCHAR *wstr,
