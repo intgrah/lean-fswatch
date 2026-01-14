@@ -56,5 +56,5 @@ def main : IO UInt32 := do
     IO.eprintln "FAIL: removed"
 
   IO.FS.removeDirAll dir
-  IO.println s!"{passed} passed, {failed} failed"
+  println!"{passed} passed, {failed} failed"
   return if failed > 0 then 1 else 0

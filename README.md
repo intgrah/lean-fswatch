@@ -8,7 +8,7 @@ File system watching for Lean 4
 import FSWatch
 
 FSWatch.Manager.withManager fun m => do
-  let _ ← m.watchDir "." fun event => IO.println s!"{repr event}"
+  let _ ← m.watchDir "." fun event => println!"{repr event}"
   for _ in [:100] do
     m.processEvents
     IO.sleep 100
