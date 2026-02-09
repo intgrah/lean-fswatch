@@ -4,6 +4,8 @@
 
 File system watching for Lean 4. Based on [hfsnotify](https://github.com/haskell-fswatch/hfsnotify).
 
+Do not use, highly experimental.
+
 ## Platforms
 
 - [x] Linux (inotify)
