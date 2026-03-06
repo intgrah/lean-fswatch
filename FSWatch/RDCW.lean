@@ -1,3 +1,7 @@
+module
+
+@[expose] public section
+
 namespace FSWatch.RDCW
 
 abbrev Handle := USize

@@ -1,6 +1,10 @@
-import FSWatch.Types
-import FSWatch.INotify
-import FSWatch.RDCW
+module
+
+public import FSWatch.Types
+public import FSWatch.INotify
+public import FSWatch.RDCW
+
+@[expose] public section
 
 namespace FSWatch
 
@@ -13,7 +17,7 @@ structure WatchEntry where
   onNewDir : Option (FilePath → IO Unit) := none
 
 structure Manager where
-  private mk ::
+  mk ::
   linuxFd : Option INotify.FD
   watches : IO.Ref (Array WatchEntry)
   linuxWds : IO.Ref (Array (INotify.WD × Nat))
@@ -23,7 +27,7 @@ structure Manager where
 
 namespace Manager
 
-private def convertINotifyEvent (basePath : FilePath) (time : Std.Time.Timestamp)
+def convertINotifyEvent (basePath : FilePath) (time : Std.Time.Timestamp)
     (raw : INotify.RawEvent) : Event :=
   let name := if raw.name.isEmpty then "" else raw.name
   let path : FilePath := if name.isEmpty then basePath else basePath / name
@@ -42,7 +46,7 @@ private def convertINotifyEvent (basePath : FilePath) (time : Std.Time.Timestamp
     else .unknown s!"mask={raw.mask}"
   { path, time, isDirectory := isDir, kind }
 
-private def convertRDCWEvent (basePath : FilePath) (time : Std.Time.Timestamp)
+def convertRDCWEvent (basePath : FilePath) (time : Std.Time.Timestamp)
     (raw : RDCW.RawEvent) : Event :=
   let path : FilePath := basePath / raw.name
   let kind : EventKind :=
@@ -54,7 +58,7 @@ private def convertRDCWEvent (basePath : FilePath) (time : Std.Time.Timestamp)
     else .unknown s!"action={raw.action}"
   { path, time, isDirectory := .file, kind }
 
-private def linuxLoop (m : Manager) : IO Unit := do
+def linuxLoop (m : Manager) : IO Unit := do
   let some fd := m.linuxFd | return
   while ← m.running.get do
     let rawEvents ← INotify.read fd
@@ -78,7 +82,7 @@ private def linuxLoop (m : Manager) : IO Unit := do
       | none => pure ()
     IO.sleep 10
 
-private def windowsLoop (m : Manager) : IO Unit := do
+def windowsLoop (m : Manager) : IO Unit := do
   while ← m.running.get do
     let handles ← m.windowsHandles.get
     let watches ← m.watches.get
@@ -118,7 +122,7 @@ def stop (m : Manager) : IO Unit := do
   for (h, _) in handles do
     try RDCW.close h catch _ => pure ()
 
-private def addSingleWatch (m : Manager) (absPath : FilePath) (idx : Nat) : IO StopListening := do
+def addSingleWatch (m : Manager) (absPath : FilePath) (idx : Nat) : IO StopListening := do
   if System.Platform.isWindows then
     let h ← RDCW.openDir absPath.toString
     m.windowsHandles.modify (·.push (h, idx))

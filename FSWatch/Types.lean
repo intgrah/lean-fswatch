@@ -1,4 +1,8 @@
-import Std.Time.DateTime.Timestamp
+module
+
+public import Std.Time.DateTime.Timestamp
+
+@[expose] public section
 
 namespace FSWatch
 

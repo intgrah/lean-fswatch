@@ -1,3 +1,7 @@
+module
+
+@[expose] public section
+
 namespace FSWatch.INotify
 
 def FD := UInt32
