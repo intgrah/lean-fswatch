@@ -1,4 +1,6 @@
-import FSWatch.Types
-import FSWatch.INotify
-import FSWatch.RDCW
-import FSWatch.Manager
+module
+
+public import FSWatch.Types
+public import FSWatch.INotify
+public import FSWatch.RDCW
+public import FSWatch.Manager
